@@ -1,0 +1,17 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+.env
+venv/
+.venv/
+surveillance_env/
+
+# Logs and runtime files
+logs/events.db
+
+dist/
+build/
+*.egg-info/
