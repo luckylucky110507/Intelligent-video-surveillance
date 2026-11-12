@@ -4,3 +4,5 @@ torch
 torchvision
 deep-sort-realtime
 numpy
+streamlit
+pandas

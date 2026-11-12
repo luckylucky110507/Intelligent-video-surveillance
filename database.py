@@ -1,9 +1,12 @@
+import os
 import sqlite3
 from datetime import datetime
 
 DB_PATH = "logs/events.db"
 
+
 def init_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS events (
@@ -17,7 +20,9 @@ def init_db():
     conn.commit()
     conn.close()
 
+
 def log_event(event, score=None, person_id=None):
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.execute(
         "INSERT INTO events (timestamp, event, score, person_id) VALUES (?,?,?,?)",

@@ -2,18 +2,22 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.mime.image import MIMEImage
 from datetime import datetime
 
-EMAIL_FROM = os.getenv("EMAIL_FROM", "kumarilucky01437@gmail.com")
-EMAIL_TO = os.getenv("EMAIL_TO", "recipient@gmail.com")
-APP_PASS = os.getenv("EMAIL_APP_PASS", "LUC_ky1114")  # Prefer setting this in environment
+EMAIL_FROM = os.getenv("EMAIL_FROM")
+EMAIL_TO = os.getenv("EMAIL_TO")
+APP_PASS = os.getenv("EMAIL_APP_PASS")
+
 
 def send_alert(event_type, score=None, frame_path=None):
+    if not EMAIL_FROM or not EMAIL_TO or not APP_PASS:
+        print(f"Alert skipped for '{event_type}': set EMAIL_FROM, EMAIL_TO, and EMAIL_APP_PASS to enable email alerts.")
+        return
+
     msg = MIMEMultipart()
     msg["Subject"] = f"[IVS Alert] {event_type}"
-    msg["From"]    = EMAIL_FROM
-    msg["To"]      = EMAIL_TO
+    msg["From"] = EMAIL_FROM
+    msg["To"] = EMAIL_TO
 
     body = f"""
     INTELLIGENT VIDEO SURVEILLANCE ALERT
@@ -24,7 +28,10 @@ def send_alert(event_type, score=None, frame_path=None):
     """
     msg.attach(MIMEText(body, "plain"))
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(EMAIL_FROM, APP_PASS)
-        server.send_message(msg)
-    print(f"Alert sent: {event_type}")
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(EMAIL_FROM, APP_PASS)
+            server.send_message(msg)
+        print(f"Alert sent: {event_type}")
+    except (smtplib.SMTPAuthenticationError, smtplib.SMTPException, OSError, ValueError) as exc:
+        print(f"Email alert failed for '{event_type}': {exc}")

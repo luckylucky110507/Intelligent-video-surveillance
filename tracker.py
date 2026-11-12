@@ -1,11 +1,18 @@
 import cv2
 from deep_sort_realtime.deepsort_tracker import DeepSort
 
-tracker = DeepSort(max_age=30, n_init=3, nms_max_overlap=1.0)
 
-def track_persons(frame, detections):
+def create_tracker():
+    return DeepSort(max_age=30, n_init=3, nms_max_overlap=1.0)
+
+
+tracker = create_tracker()
+
+
+def track_persons(frame, detections, tracker_instance=None):
     # detections = list of ([x, y, w, h], confidence, class_id)
-    tracks = tracker.update_tracks(detections, frame=frame)
+    active_tracker = tracker_instance or tracker
+    tracks = active_tracker.update_tracks(detections, frame=frame)
     for track in tracks:
         if not track.is_confirmed():
             continue
