@@ -6,3 +6,4 @@ deep-sort-realtime
 numpy
 streamlit
 pandas
+setuptools<81
