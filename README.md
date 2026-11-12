@@ -43,7 +43,7 @@ The Streamlit app analyzes uploaded video files and provides a downloadable CSV 
 1. Push this project to a GitHub repository. Include `models/yolov8n.pt`; do not commit credentials or private video files.
 2. Sign in at [share.streamlit.io](https://share.streamlit.io/) and choose **Create app**.
 3. Select the repository and branch, set the main file path to `streamlit_app.py`, then deploy.
-4. The app installs dependencies from `requirements.txt`. Video uploads are limited to 100 MB by `.streamlit/config.toml`.
+4. The app installs Python dependencies from `requirements.txt` and OpenCV's Linux runtime libraries from `packages.txt`. Video uploads are limited to 100 MB by `.streamlit/config.toml`.
 
 Cloud-hosted apps cannot access a webcam connected to your personal computer. Upload a video in the Streamlit page instead. CPU inference can be slow; increase the frame interval or reduce the video size for faster analysis.
 
