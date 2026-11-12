@@ -3,7 +3,7 @@ import os
 import cv2
 
 from alerts import send_alert
-from anomaly import detect_rule_anomaly
+from anomaly_rules import detect_rule_anomaly
 from camera_stream import get_stream
 from database import init_db, log_event
 from detector import detect

@@ -5,7 +5,7 @@ import cv2
 import pandas as pd
 import streamlit as st
 
-from anomaly import anomaly_model_loaded, detect_rule_anomaly
+from anomaly_rules import detect_rule_anomaly
 from detector import detect, draw_boxes
 from motion import MotionDetector
 from tracker import create_tracker, track_persons
@@ -58,11 +58,10 @@ uploaded_video = st.file_uploader(
     help="For cloud deployment, upload a video file. The server cannot access your computer's webcam.",
 )
 
-if not anomaly_model_loaded:
-    st.info(
-        "Rule-based alerts are active for crowds and high motion. "
-        "The learned autoencoder remains disabled until trained weights are provided."
-    )
+st.info(
+    "Rule-based alerts are active for crowds and high motion. "
+    "The learned autoencoder is a separate experimental feature."
+)
 
 if uploaded_video is not None:
     st.video(uploaded_video)

@@ -1,6 +1,6 @@
 import unittest
 
-from anomaly import detect_rule_anomaly
+from anomaly_rules import detect_rule_anomaly
 
 
 class RuleAnomalyTests(unittest.TestCase):

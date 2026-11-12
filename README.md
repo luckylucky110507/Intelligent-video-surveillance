@@ -84,6 +84,7 @@ The app accepts MP4, AVI, MOV, and MKV uploads up to 100 MB. Increase the frame 
 - `detector.py` — YOLO person detection
 - `tracker.py` — DeepSORT tracking
 - `motion.py` — Farneback optical-flow motion detection
+- `anomaly_rules.py` — lightweight crowd and high-motion rules
 - `anomaly.py` — experimental autoencoder
 - `alerts.py` — environment-configured, throttled email alerts
 - `database.py` — SQLite event logging
