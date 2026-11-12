@@ -5,7 +5,7 @@ import cv2
 import pandas as pd
 import streamlit as st
 
-from anomaly import detect_anomaly
+from anomaly import anomaly_model_loaded, detect_anomaly
 from detector import detect, draw_boxes
 from tracker import create_tracker, track_persons
 
@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 st.title("Intelligent Video Surveillance")
-st.caption("Analyze an uploaded video for people, motion, and available anomaly signals.")
+st.caption("Analyze an uploaded video for person detections, tracking, and experimental anomaly signals.")
 
 with st.sidebar:
     st.header("Analysis settings")
@@ -43,8 +43,8 @@ uploaded_video = st.file_uploader(
     help="For cloud deployment, upload a video file. The server cannot access your computer's webcam.",
 )
 
-if not os.path.exists(os.path.join("models", "autoencoder.pth")):
-    st.info("Anomaly detection is disabled until a trained models/autoencoder.pth is provided.")
+if not anomaly_model_loaded:
+    st.info("Anomaly detection is experimental and disabled until a trained models/autoencoder.pth is provided.")
 
 if uploaded_video is not None:
     st.video(uploaded_video)
@@ -87,7 +87,6 @@ if uploaded_video is not None:
                     frame = cv2.resize(frame, (int(width * scale), int(height * scale)))
 
                 results = detect(frame)
-                annotated = draw_boxes(frame.copy(), results)
                 detections = []
                 people_count = len(results.boxes)
                 for box in results.boxes:
@@ -96,7 +95,11 @@ if uploaded_video is not None:
                     detections.append(([x1, y1, x2 - x1, y2 - y1], confidence, 0))
 
                 if tracker is not None:
-                    annotated = track_persons(annotated, detections, tracker_instance=tracker)
+                    annotated = track_persons(
+                        frame.copy(), detections, tracker_instance=tracker
+                    )
+                else:
+                    annotated = draw_boxes(frame.copy(), results)
 
                 anomaly, anomaly_score = detect_anomaly(annotated)
                 timestamp = frame_index / fps if fps > 0 else 0
@@ -128,7 +131,10 @@ if uploaded_video is not None:
                 first, second, third = st.columns(3)
                 first.metric("Frames analyzed", sample_count)
                 second.metric("Peak people detected", int(report["people_detected"].max()))
-                third.metric("Anomaly model", "Enabled" if os.path.exists(os.path.join("models", "autoencoder.pth")) else "Not trained")
+                third.metric(
+                    "Anomaly model",
+                    "Experimental" if anomaly_model_loaded else "Not trained",
+                )
 
                 st.subheader("Detection report")
                 st.dataframe(report, use_container_width=True, hide_index=True)

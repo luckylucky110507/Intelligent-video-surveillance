@@ -33,11 +33,13 @@ class ConvAutoencoder(nn.Module):
 # Load or create model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ae_model = ConvAutoencoder().to(device)
-MODEL_PATH = os.path.join("models", "autoencoder.pth")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "autoencoder.pth")
+anomaly_model_loaded = False
 
 if os.path.exists(MODEL_PATH):
     ae_model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
     ae_model.eval()
+    anomaly_model_loaded = True
 
 transform = T.Compose([
     T.ToPILImage(),
@@ -49,8 +51,8 @@ ANOMALY_THRESHOLD = 0.015  # tune this on your data
 
 
 def detect_anomaly(frame):
-    if not os.path.exists(MODEL_PATH):
-        return False, 0.0
+    if not anomaly_model_loaded:
+        return None, None
 
     tensor = transform(frame).unsqueeze(0).to(device)
     with torch.no_grad():
@@ -62,6 +64,14 @@ def detect_anomaly(frame):
 
 def train_autoencoder(normal_frames, epochs=20):
     """Train on normal footage so model learns what 'normal' looks like"""
+    global anomaly_model_loaded
+    normal_frames = list(normal_frames)
+    if not normal_frames:
+        raise ValueError("Provide at least one normal frame to train the autoencoder.")
+    if epochs < 1:
+        raise ValueError("epochs must be at least 1.")
+
+    ae_model.train()
     optimizer = torch.optim.Adam(ae_model.parameters(), lr=1e-3)
     criterion = nn.MSELoss()
 
@@ -79,4 +89,6 @@ def train_autoencoder(normal_frames, epochs=20):
 
     os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
     torch.save(ae_model.state_dict(), MODEL_PATH)
+    ae_model.eval()
+    anomaly_model_loaded = True
     print("Model saved!")

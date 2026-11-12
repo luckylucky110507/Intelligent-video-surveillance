@@ -1,14 +1,10 @@
 import cv2
 import numpy as np
-import torch
-import torch.nn as nn
-
-# Deep Learning approach: use dense optical flow (Farneback)
-# Better than MOG2 because it uses pixel-level motion vectors
 
 prev_frame = None
 
-def dl_motion_detect(frame, threshold=2.5):
+
+def motion_detect(frame, threshold=2.5):
     global prev_frame
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -16,7 +12,6 @@ def dl_motion_detect(frame, threshold=2.5):
         prev_frame = gray
         return False, None
 
-    # Farneback optical flow (DL-style dense flow)
     flow = cv2.calcOpticalFlowFarneback(
         prev_frame, gray,
         None, 0.5, 3, 15, 3, 5, 1.2, 0
