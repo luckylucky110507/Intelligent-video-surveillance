@@ -4,7 +4,7 @@ import cv2
 model = YOLO("models/yolov8n.pt")  # nano = fastest; use yolov8m.pt for better accuracy
 
 def detect(frame):
-    results = model(frame, conf=0.4, classes=[0])  # class 0 = person
+    results = model(frame, conf=0.4, classes=[0], verbose=False)  # class 0 = person
     return results[0]  # bounding boxes, confidence scores, class IDs
 
 # Draw boxes

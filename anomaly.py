@@ -50,6 +50,15 @@ transform = T.Compose([
 ANOMALY_THRESHOLD = 0.015  # tune this on your data
 
 
+def detect_rule_anomaly(person_count, motion_score, crowd_limit=3, motion_threshold=2.5):
+    reasons = []
+    if person_count > crowd_limit:
+        reasons.append("crowd")
+    if motion_score > motion_threshold:
+        reasons.append("high_motion")
+    return bool(reasons), reasons
+
+
 def detect_anomaly(frame):
     if not anomaly_model_loaded:
         return None, None

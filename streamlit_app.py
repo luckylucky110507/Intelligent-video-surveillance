@@ -5,8 +5,9 @@ import cv2
 import pandas as pd
 import streamlit as st
 
-from anomaly import anomaly_model_loaded, detect_anomaly
+from anomaly import anomaly_model_loaded, detect_rule_anomaly
 from detector import detect, draw_boxes
+from motion import MotionDetector
 from tracker import create_tracker, track_persons
 
 
@@ -17,7 +18,7 @@ st.set_page_config(
 )
 
 st.title("Intelligent Video Surveillance")
-st.caption("Analyze an uploaded video for person detections, tracking, and experimental anomaly signals.")
+st.caption("Analyze an uploaded video for people, crowding, and unusual motion.")
 
 with st.sidebar:
     st.header("Analysis settings")
@@ -29,6 +30,20 @@ with st.sidebar:
         help="Higher values process faster but sample fewer frames.",
     )
     enable_tracking = st.checkbox("Enable person tracking", value=True)
+    crowd_limit = st.number_input(
+        "Crowd alert when people exceed",
+        min_value=1,
+        max_value=50,
+        value=3,
+    )
+    motion_threshold = st.slider(
+        "High-motion threshold",
+        min_value=0.5,
+        max_value=15.0,
+        value=2.5,
+        step=0.5,
+        help="Higher thresholds reduce motion alerts. This is a scene-dependent heuristic.",
+    )
     max_samples = st.number_input(
         "Maximum analyzed frames",
         min_value=10,
@@ -44,7 +59,10 @@ uploaded_video = st.file_uploader(
 )
 
 if not anomaly_model_loaded:
-    st.info("Anomaly detection is experimental and disabled until a trained models/autoencoder.pth is provided.")
+    st.info(
+        "Rule-based alerts are active for crowds and high motion. "
+        "The learned autoencoder remains disabled until trained weights are provided."
+    )
 
 if uploaded_video is not None:
     st.video(uploaded_video)
@@ -67,25 +85,39 @@ if uploaded_video is not None:
             fps = cap.get(cv2.CAP_PROP_FPS)
             total_frames = max(total_frames, 1)
             tracker = create_tracker() if enable_tracking else None
+            motion_detector = MotionDetector(threshold=motion_threshold)
             progress = st.progress(0, text="Analyzing video...")
             preview = st.empty()
             rows = []
             sample_count = 0
             frame_index = 0
+            peak_motion_since_sample = 0.0
 
             while sample_count < int(max_samples):
                 ok, frame = cap.read()
                 if not ok:
                     break
                 frame_index += 1
-                if frame_index % frame_interval != 0:
-                    continue
 
                 height, width = frame.shape[:2]
                 scale = min(1.0, 1280 / max(width, height))
                 if scale < 1:
                     frame = cv2.resize(frame, (int(width * scale), int(height * scale)))
 
+                _, motion_magnitude = motion_detector.detect(frame)
+                motion_score = (
+                    float(motion_magnitude.mean())
+                    if motion_magnitude is not None
+                    else 0.0
+                )
+                peak_motion_since_sample = max(
+                    peak_motion_since_sample, motion_score
+                )
+                if frame_index % frame_interval != 0:
+                    continue
+
+                motion_score = peak_motion_since_sample
+                peak_motion_since_sample = 0.0
                 results = detect(frame)
                 detections = []
                 people_count = len(results.boxes)
@@ -101,14 +133,32 @@ if uploaded_video is not None:
                 else:
                     annotated = draw_boxes(frame.copy(), results)
 
-                anomaly, anomaly_score = detect_anomaly(annotated)
+                anomaly, reasons = detect_rule_anomaly(
+                    people_count,
+                    motion_score,
+                    crowd_limit=int(crowd_limit),
+                    motion_threshold=float(motion_threshold),
+                )
+                reason_text = ", ".join(reasons)
+                if anomaly:
+                    cv2.putText(
+                        annotated,
+                        f"ANOMALY: {reason_text}",
+                        (20, 40),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.8,
+                        (0, 0, 255),
+                        2,
+                    )
+
                 timestamp = frame_index / fps if fps > 0 else 0
                 rows.append(
                     {
                         "timestamp_seconds": round(timestamp, 2),
                         "people_detected": people_count,
+                        "peak_motion_score": round(motion_score, 3),
                         "anomaly": anomaly,
-                        "anomaly_score": anomaly_score,
+                        "anomaly_reasons": reason_text,
                     }
                 )
                 sample_count += 1
@@ -131,10 +181,8 @@ if uploaded_video is not None:
                 first, second, third = st.columns(3)
                 first.metric("Frames analyzed", sample_count)
                 second.metric("Peak people detected", int(report["people_detected"].max()))
-                third.metric(
-                    "Anomaly model",
-                    "Experimental" if anomaly_model_loaded else "Not trained",
-                )
+                anomaly_count = int(report["anomaly"].sum())
+                third.metric("Anomaly frames", anomaly_count)
 
                 st.subheader("Detection report")
                 st.dataframe(report, use_container_width=True, hide_index=True)

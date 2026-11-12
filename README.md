@@ -5,16 +5,16 @@ Person detection and tracking for webcam/RTSP streams and uploaded videos, built
 ## Features
 
 - Detect people with the YOLOv8n model.
-- Gate desktop-camera inference with Farneback optical-flow motion detection.
+- Flag high optical flow as a configurable, rule-based motion alert.
 - Track detections with DeepSORT and display track IDs.
 - Analyze uploaded videos in Streamlit and download a per-frame CSV report.
 - Optionally log events to SQLite and send email alerts with a 60-second per-event cooldown.
 
 ## Architecture
 
-**Desktop camera:** Camera/RTSP → Farneback motion gate → YOLO person detection (every third frame) → DeepSORT tracking (every frame) → experimental anomaly detector → throttled email alerts and SQLite event log.
+**Desktop camera:** Camera/RTSP → Farneback motion scoring on each frame + YOLO person detection (every third frame) → DeepSORT tracking (every frame) → crowd/high-motion rules → throttled email alerts and SQLite event log.
 
-**Streamlit:** Uploaded video → sampled frames → YOLO person detection → optional DeepSORT tracking → downloadable CSV report.
+**Streamlit:** Uploaded video → per-frame optical-flow scoring + sampled YOLO person detection → optional DeepSORT tracking → crowd/high-motion rules → downloadable CSV report.
 
 Farneback is a classical computer-vision optical-flow method; it is not deep learning.
 
@@ -60,7 +60,9 @@ Email sending runs in a background thread. Alerts of the same type are limited t
 
 ## Anomaly detection status
 
-Anomaly detection is **experimental and disabled until trained weights are supplied** at `models/autoencoder.pth`. The autoencoder must be trained on representative normal footage and evaluated on separate normal and anomalous validation footage. The current `0.015` threshold is only a placeholder; no accuracy, false-positive rate, or calibrated threshold is claimed. Do not rely on this component for safety-critical decisions.
+The current anomaly alerts are **rule-based heuristics**: more than three people in a frame or mean optical-flow magnitude above the configured threshold (default `2.5`). Crowd and motion thresholds can be adjusted in the Streamlit sidebar. Optical flow can react to camera movement, lighting changes, or scene-specific motion; tune and validate thresholds for each camera before relying on alerts.
+
+The autoencoder is a separate **experimental feature** and is not used by these rules. It stays disabled until trained weights are supplied at `models/autoencoder.pth`. Train it on representative normal footage and evaluate on separate normal and anomalous validation footage. Its current `0.015` threshold is only a placeholder; no accuracy or false-positive rate is claimed. Do not rely on either approach for safety-critical decisions.
 
 ## Streamlit Community Cloud
 
